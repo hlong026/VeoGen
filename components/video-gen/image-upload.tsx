@@ -16,6 +16,7 @@ interface ImageUploadProps {
 
 export function ImageUpload({ label, value, onChange, disabled }: ImageUploadProps) {
   const [isDragging, setIsDragging] = useState(false)
+  const [aspectRatio, setAspectRatio] = useState<number | null>(null)
   const { t } = useLocale()
 
   const handleFile = useCallback((file: File) => {
@@ -24,6 +25,12 @@ export function ImageUpload({ label, value, onChange, disabled }: ImageUploadPro
     const reader = new FileReader()
     reader.onload = (e) => {
       const base64 = e.target?.result as string
+      // 获取图片尺寸
+      const img = new Image()
+      img.onload = () => {
+        setAspectRatio(img.width / img.height)
+      }
+      img.src = base64
       onChange(base64)
     }
     reader.readAsDataURL(file)
@@ -54,6 +61,7 @@ export function ImageUpload({ label, value, onChange, disabled }: ImageUploadPro
 
   const handleRemove = () => {
     onChange(null)
+    setAspectRatio(null)
   }
 
   return (
@@ -61,11 +69,14 @@ export function ImageUpload({ label, value, onChange, disabled }: ImageUploadPro
       <label className="text-sm font-medium text-foreground">{label}</label>
       
       {value ? (
-        <div className="relative group rounded-lg overflow-hidden border border-border bg-card aspect-video">
+        <div 
+          className="relative group rounded-lg overflow-hidden border border-border bg-card"
+          style={{ aspectRatio: aspectRatio || 16/9 }}
+        >
           <img
             src={value || "/placeholder.svg"}
             alt={label}
-            className="w-full h-full object-cover"
+            className="w-full h-full object-contain"
           />
           <button
             type="button"
@@ -82,7 +93,7 @@ export function ImageUpload({ label, value, onChange, disabled }: ImageUploadPro
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           className={cn(
-            'flex flex-col items-center justify-center gap-3 p-6 rounded-lg border-2 border-dashed cursor-pointer transition-all aspect-video',
+            'flex flex-col items-center justify-center gap-3 p-6 rounded-lg border-2 border-dashed cursor-pointer transition-all min-h-[120px]',
             isDragging 
               ? 'border-primary bg-primary/5' 
               : 'border-border hover:border-muted-foreground hover:bg-muted/30',

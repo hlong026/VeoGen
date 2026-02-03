@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { Video, Loader2, CheckCircle, AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -14,6 +15,7 @@ interface VideoPreviewProps {
 
 export function VideoPreview({ status, videoUrl, enhancedPrompt, error }: VideoPreviewProps) {
   const { t } = useLocale()
+  const [aspectRatio, setAspectRatio] = useState<number | null>(null)
 
   const statusLabels = {
     idle: t.idle,
@@ -21,6 +23,13 @@ export function VideoPreview({ status, videoUrl, enhancedPrompt, error }: VideoP
     processing: t.processing,
     completed: t.completed,
     failed: t.failed,
+  }
+
+  const handleVideoLoad = (e: React.SyntheticEvent<HTMLVideoElement>) => {
+    const video = e.currentTarget
+    if (video.videoWidth && video.videoHeight) {
+      setAspectRatio(video.videoWidth / video.videoHeight)
+    }
   }
 
   return (
@@ -44,7 +53,10 @@ export function VideoPreview({ status, videoUrl, enhancedPrompt, error }: VideoP
         )}
       </div>
 
-      <div className="relative aspect-video rounded-xl overflow-hidden bg-muted/30 border border-border">
+      <div 
+        className="relative rounded-xl overflow-hidden bg-muted/30 border border-border"
+        style={{ aspectRatio: aspectRatio && status === 'completed' ? aspectRatio : 16/9 }}
+      >
         {status === 'idle' && (
           <div className="absolute inset-0 flex flex-col items-center justify-center text-muted-foreground">
             <Video className="w-16 h-16 mb-4 opacity-20" />
@@ -73,6 +85,7 @@ export function VideoPreview({ status, videoUrl, enhancedPrompt, error }: VideoP
             controls
             autoPlay
             loop
+            onLoadedMetadata={handleVideoLoad}
             className="w-full h-full object-contain"
           />
         )}
