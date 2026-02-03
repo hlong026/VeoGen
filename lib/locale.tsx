@@ -17,7 +17,7 @@ const translations = {
     apiKey: 'API Key',
     enterApiKey: 'Enter your API key',
     apiBaseUrl: 'API Base URL',
-    defaultUrl: 'Default: https://yunwu.ai',
+    defaultUrl: 'Default: https://api.mooerai.xyz',
     cancel: 'Cancel',
     saveConfiguration: 'Save Configuration',
     
@@ -88,7 +88,7 @@ const translations = {
     apiKey: 'API 密钥',
     enterApiKey: '输入您的 API 密钥',
     apiBaseUrl: 'API 基础 URL',
-    defaultUrl: '默认: https://yunwu.ai',
+    defaultUrl: '默认: https://api.mooerai.xyz',
     cancel: '取消',
     saveConfiguration: '保存配置',
     

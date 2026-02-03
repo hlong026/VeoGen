@@ -8,6 +8,8 @@ export async function GET(request: NextRequest) {
     const apiKey = searchParams.get('apiKey')
     const apiBaseUrl = searchParams.get('apiBaseUrl')
 
+    console.log('[QUERY] 查询任务:', taskId)
+
     if (!taskId) {
       return NextResponse.json({ error: 'Task ID is required' }, { status: 400 })
     }
@@ -16,7 +18,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'API Key is required' }, { status: 400 })
     }
 
-    const baseUrl = apiBaseUrl || 'https://yunwu.ai'
+    const baseUrl = apiBaseUrl || 'https://api.mooerai.xyz'
+    console.log('[QUERY] 调用 API:', `${baseUrl}/v1/video/query?id=${taskId}`)
 
     // Query the Veo API
     const response = await fetch(`${baseUrl}/v1/video/query?id=${encodeURIComponent(taskId)}`, {
@@ -30,6 +33,7 @@ export async function GET(request: NextRequest) {
 
     if (!response.ok) {
       const errorText = await response.text()
+      console.log('[QUERY] API 错误:', response.status, errorText)
       return NextResponse.json(
         { error: `API Error: ${response.status} - ${errorText}` },
         { status: response.status }
@@ -37,6 +41,7 @@ export async function GET(request: NextRequest) {
     }
 
     const data = await response.json()
+    console.log('[QUERY] 任务状态:', data.status, data.video_url ? '有视频URL' : '无视频URL')
 
     // Update database if status changed
     if (data.status === 'completed' || data.status === 'failed' || data.video_url) {
@@ -54,7 +59,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(data)
   } catch (error) {
-    console.error('Query video error:', error)
+    console.error('[QUERY] 异常:', error)
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to query video' },
       { status: 500 }

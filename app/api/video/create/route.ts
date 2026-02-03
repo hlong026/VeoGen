@@ -6,15 +6,20 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { model, prompt, images, enhance_prompt, apiKey, apiBaseUrl } = body
 
+    console.log('[CREATE] 收到请求:', { model, prompt: prompt?.substring(0, 50) + '...', imagesCount: images?.length || 0, enhance_prompt })
+
     if (!apiKey) {
+      console.log('[CREATE] 错误: 缺少 API Key')
       return NextResponse.json({ error: 'API Key is required' }, { status: 400 })
     }
 
     if (!prompt) {
+      console.log('[CREATE] 错误: 缺少 Prompt')
       return NextResponse.json({ error: 'Prompt is required' }, { status: 400 })
     }
 
-    const baseUrl = apiBaseUrl || 'https://yunwu.ai'
+    const baseUrl = apiBaseUrl || 'https://api.mooerai.xyz'
+    console.log('[CREATE] 调用 API:', `${baseUrl}/v1/video/create`)
 
     // Call the Veo API
     const response = await fetch(`${baseUrl}/v1/video/create`, {
@@ -32,15 +37,29 @@ export async function POST(request: NextRequest) {
       }),
     })
 
+    const responseText = await response.text()
+    console.log('[CREATE] API 响应状态:', response.status)
+    console.log('[CREATE] API 响应内容:', responseText.substring(0, 500))
+    
     if (!response.ok) {
-      const errorText = await response.text()
+      console.log('[CREATE] API 错误:', response.status, responseText)
       return NextResponse.json(
-        { error: `API Error: ${response.status} - ${errorText}` },
+        { error: `API Error: ${response.status} - ${responseText}` },
         { status: response.status }
       )
     }
 
-    const data = await response.json()
+    let data
+    try {
+      data = JSON.parse(responseText)
+      console.log('[CREATE] 解析成功, task_id:', data.id)
+    } catch {
+      console.log('[CREATE] JSON 解析失败:', responseText.substring(0, 200))
+      return NextResponse.json(
+        { error: `Invalid API response: ${responseText.substring(0, 200)}` },
+        { status: 500 }
+      )
+    }
 
     // Save to database
     const supabase = await createClient()
@@ -57,12 +76,15 @@ export async function POST(request: NextRequest) {
       })
 
     if (dbError) {
-      console.error('Database error:', dbError)
+      console.error('[CREATE] 数据库错误:', dbError)
+    } else {
+      console.log('[CREATE] 已保存到数据库')
     }
 
+    console.log('[CREATE] 请求完成, 返回 task_id:', data.id)
     return NextResponse.json(data)
   } catch (error) {
-    console.error('Create video error:', error)
+    console.error('[CREATE] 异常:', error)
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to create video' },
       { status: 500 }

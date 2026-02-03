@@ -24,7 +24,7 @@ export default function HomePage() {
 
   // API Config State
   const [apiKey, setApiKey] = useState('')
-  const [apiBaseUrl, setApiBaseUrl] = useState('https://yunwu.ai')
+  const [apiBaseUrl, setApiBaseUrl] = useState('https://api.mooerai.xyz')
   const [model, setModel] = useState('veo3-fast-frames')
 
   // Generation Form State
