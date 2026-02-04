@@ -18,11 +18,15 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'API Key is required' }, { status: 400 })
     }
 
-    const baseUrl = apiBaseUrl || 'https://api.mooerai.xyz'
-    console.log('[QUERY] 调用 API:', `${baseUrl}/v1/video/query?id=${taskId}`)
+    const baseUrl = (apiBaseUrl || 'https://api.mooerai.xyz').replace(/\/+$/, '')
+    // 检查 baseUrl 是否已包含 /v1
+    const apiEndpoint = baseUrl.endsWith('/v1')
+      ? `${baseUrl}/video/query?id=${encodeURIComponent(taskId)}`
+      : `${baseUrl}/v1/video/query?id=${encodeURIComponent(taskId)}`
+    console.log('[QUERY] 调用 API:', apiEndpoint)
 
     // Query the Veo API
-    const response = await fetch(`${baseUrl}/v1/video/query?id=${encodeURIComponent(taskId)}`, {
+    const response = await fetch(apiEndpoint, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',

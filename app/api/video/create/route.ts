@@ -18,13 +18,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Prompt is required' }, { status: 400 })
     }
 
-    const baseUrl = apiBaseUrl || 'https://api.mooerai.xyz'
-    console.log('[CREATE] 调用 API:', `${baseUrl}/v1/video/create`)
+    const baseUrl = (apiBaseUrl || 'https://api.mooerai.xyz').replace(/\/+$/, '')
+    // 检查 baseUrl 是否已包含 /v1
+    const apiEndpoint = baseUrl.endsWith('/v1') 
+      ? `${baseUrl}/video/create`
+      : `${baseUrl}/v1/video/create`
+    console.log('[CREATE] 调用 API:', apiEndpoint)
 
     // Call the Veo API
     let response: Response
     try {
-      response = await fetch(`${baseUrl}/v1/video/create`, {
+      response = await fetch(apiEndpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
