@@ -74,24 +74,28 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Save to database
-    const supabase = await createClient()
-    const { error: dbError } = await supabase
-      .from('video_generations')
-      .insert({
-        task_id: data.id,
-        model,
-        prompt,
-        first_image: images?.[0] || null,
-        last_image: images?.[1] || null,
-        status: data.status || 'pending',
-        enhanced_prompt: data.enhanced_prompt || null,
-      })
+    // Save to database (non-blocking, don't fail if db error)
+    try {
+      const supabase = await createClient()
+      const { error: dbError } = await supabase
+        .from('video_generations')
+        .insert({
+          task_id: data.id,
+          model,
+          prompt,
+          first_image: images?.[0] || null,
+          last_image: images?.[1] || null,
+          status: data.status || 'pending',
+          enhanced_prompt: data.enhanced_prompt || null,
+        })
 
-    if (dbError) {
-      console.error('[CREATE] 数据库错误:', dbError)
-    } else {
-      console.log('[CREATE] 已保存到数据库')
+      if (dbError) {
+        console.error('[CREATE] 数据库错误:', dbError.message, dbError.details)
+      } else {
+        console.log('[CREATE] 已保存到数据库')
+      }
+    } catch (dbErr) {
+      console.error('[CREATE] 数据库异常:', dbErr)
     }
 
     console.log('[CREATE] 请求完成, 返回 task_id:', data.id)
