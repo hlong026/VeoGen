@@ -22,20 +22,29 @@ export async function POST(request: NextRequest) {
     console.log('[CREATE] 调用 API:', `${baseUrl}/v1/video/create`)
 
     // Call the Veo API
-    const response = await fetch(`${baseUrl}/v1/video/create`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model,
-        prompt,
-        images: images?.filter(Boolean) || [],
-        enhance_prompt: enhance_prompt ?? true,
-      }),
-    })
+    let response: Response
+    try {
+      response = await fetch(`${baseUrl}/v1/video/create`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model,
+          prompt,
+          images: images?.filter(Boolean) || [],
+          enhance_prompt: enhance_prompt ?? true,
+        }),
+      })
+    } catch (fetchError) {
+      console.error('[CREATE] Fetch 失败:', fetchError)
+      return NextResponse.json(
+        { error: `Network error: ${fetchError instanceof Error ? fetchError.message : 'Failed to connect to API'}` },
+        { status: 500 }
+      )
+    }
 
     const responseText = await response.text()
     console.log('[CREATE] API 响应状态:', response.status)
