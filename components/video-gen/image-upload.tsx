@@ -25,13 +25,35 @@ export function ImageUpload({ label, value, onChange, disabled }: ImageUploadPro
     const reader = new FileReader()
     reader.onload = (e) => {
       const base64 = e.target?.result as string
-      // 获取图片尺寸
+      // 压缩图片
       const img = new Image()
       img.onload = () => {
-        setAspectRatio(img.width / img.height)
+        const canvas = document.createElement('canvas')
+        const maxSize = 1024 // 最大尺寸
+        let { width, height } = img
+        
+        // 按比例缩放
+        if (width > maxSize || height > maxSize) {
+          if (width > height) {
+            height = (height / width) * maxSize
+            width = maxSize
+          } else {
+            width = (width / height) * maxSize
+            height = maxSize
+          }
+        }
+        
+        canvas.width = width
+        canvas.height = height
+        const ctx = canvas.getContext('2d')
+        ctx?.drawImage(img, 0, 0, width, height)
+        
+        // 转换为压缩后的 base64
+        const compressedBase64 = canvas.toDataURL('image/jpeg', 0.8)
+        setAspectRatio(img.naturalWidth / img.naturalHeight)
+        onChange(compressedBase64)
       }
       img.src = base64
-      onChange(base64)
     }
     reader.readAsDataURL(file)
   }, [onChange])
