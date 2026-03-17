@@ -1,3 +1,5 @@
+export type VideoStatus = 'pending' | 'processing' | 'completed' | 'failed'
+
 export interface VideoGeneration {
   id: string
   task_id: string
@@ -5,7 +7,7 @@ export interface VideoGeneration {
   prompt: string
   first_image: string | null
   last_image: string | null
-  status: 'pending' | 'processing' | 'completed' | 'failed'
+  status: VideoStatus
   video_url: string | null
   enhanced_prompt: string | null
   created_at: string
@@ -17,20 +19,49 @@ export interface CreateVideoRequest {
   prompt: string
   images?: string[]
   enhance_prompt?: boolean
+  apiKey: string
+  apiBaseUrl: string
 }
 
 export interface CreateVideoResponse {
   id: string
-  status: string
+  status: VideoStatus
   video_url: string | null
-  enhanced_prompt: string
-  status_update_time: number
+  enhanced_prompt: string | null
+  status_update_time?: number
 }
 
 export interface QueryVideoResponse {
   id: string
-  status: string
+  status: VideoStatus
   video_url: string | null
-  enhanced_prompt: string
-  status_update_time: number
+  enhanced_prompt: string | null
+  status_update_time?: number
+}
+
+export interface ApiErrorResponse {
+  error: string
+  details?: string
+}
+
+export interface PollConfig {
+  maxRetries?: number
+  initialDelayMs?: number
+  maxDelayMs?: number
+}
+
+export type GenerationType = 'video' | 'image'
+
+export interface ImageGeneration {
+  id: string
+  prompt: string
+  image_url: string
+  model: string
+  created_at: string
+}
+
+export interface GenerationMode {
+  type: GenerationType
+  label: string
+  icon: string
 }

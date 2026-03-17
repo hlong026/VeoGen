@@ -1,110 +1,106 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { buildApiEndpoint, createApiHeaders, handleApiResponse } from '@/lib/api-utils'
+import type { CreateVideoResponse, ApiErrorResponse } from '@/lib/types'
+
+const MAX_IMAGE_SIZE = 10 * 1024 * 1024 // 10MB
+const MAX_PROMPT_LENGTH = 2000
+
+function validateRequest(model: string, prompt: string, apiKey: string) {
+  if (!apiKey) {
+    return { valid: false, error: 'API Key is required' }
+  }
+  if (!model) {
+    return { valid: false, error: 'Model is required' }
+  }
+  if (!prompt?.trim()) {
+    return { valid: false, error: 'Prompt is required' }
+  }
+  if (prompt.length > MAX_PROMPT_LENGTH) {
+    return { valid: false, error: `Prompt must be less than ${MAX_PROMPT_LENGTH} characters` }
+  }
+  return { valid: true }
+}
+
+function validateImages(images: string[] | undefined) {
+  if (!images) return { valid: true, images: [] }
+  
+  const validImages = images.filter(Boolean)
+  
+  for (const img of validImages) {
+    if (img.length > MAX_IMAGE_SIZE) {
+      return { valid: false, error: 'Image size exceeds 10MB limit' }
+    }
+  }
+  
+  return { valid: true, images: validImages }
+}
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     const { model, prompt, images, enhance_prompt, apiKey, apiBaseUrl } = body
 
-    console.log('[CREATE] 收到请求:', { model, prompt: prompt?.substring(0, 50) + '...', imagesCount: images?.length || 0, enhance_prompt })
-
-    if (!apiKey) {
-      console.log('[CREATE] 错误: 缺少 API Key')
-      return NextResponse.json({ error: 'API Key is required' }, { status: 400 })
+    // Validate request
+    const validation = validateRequest(model, prompt, apiKey)
+    if (!validation.valid) {
+      return NextResponse.json({ error: validation.error }, { status: 400 })
     }
 
-    if (!prompt) {
-      console.log('[CREATE] 错误: 缺少 Prompt')
-      return NextResponse.json({ error: 'Prompt is required' }, { status: 400 })
+    // Validate images
+    const imageValidation = validateImages(images)
+    if (!imageValidation.valid) {
+      return NextResponse.json({ error: imageValidation.error }, { status: 400 })
     }
 
-    const baseUrl = (apiBaseUrl || 'https://api.mooerai.xyz').replace(/\/+$/, '')
-    // 检查 baseUrl 是否已包含 /v1
-    const apiEndpoint = baseUrl.endsWith('/v1') 
-      ? `${baseUrl}/video/create`
-      : `${baseUrl}/v1/video/create`
-    console.log('[CREATE] 调用 API:', apiEndpoint)
+    const apiEndpoint = buildApiEndpoint(apiBaseUrl, '/video/create')
+    console.log('[CREATE] Calling API:', apiEndpoint)
 
     // Call the Veo API
     let response: Response
     try {
       response = await fetch(apiEndpoint, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'Authorization': `Bearer ${apiKey}`,
-        },
+        headers: createApiHeaders(apiKey),
         body: JSON.stringify({
           model,
           prompt,
-          images: images?.filter(Boolean) || [],
+          images: imageValidation.images,
           enhance_prompt: enhance_prompt ?? true,
         }),
       })
     } catch (fetchError) {
-      console.error('[CREATE] Fetch 失败:', fetchError)
+      console.error('[CREATE] Network error:', fetchError)
       return NextResponse.json(
         { error: `Network error: ${fetchError instanceof Error ? fetchError.message : 'Failed to connect to API'}` },
         { status: 500 }
       )
     }
 
-    const responseText = await response.text()
-    console.log('[CREATE] API 响应状态:', response.status)
-    console.log('[CREATE] API 响应内容:', responseText.substring(0, 500))
-    
-    if (!response.ok) {
-      console.log('[CREATE] API 错误:', response.status, responseText)
-      return NextResponse.json(
-        { error: `API Error: ${response.status} - ${responseText}` },
-        { status: response.status }
-      )
-    }
+    const data = await handleApiResponse<CreateVideoResponse>(response)
+    console.log('[CREATE] Success, task_id:', data.id)
 
-    let data
-    try {
-      data = JSON.parse(responseText)
-      console.log('[CREATE] 解析成功, task_id:', data.id)
-    } catch {
-      console.log('[CREATE] JSON 解析失败:', responseText.substring(0, 200))
-      return NextResponse.json(
-        { error: `Invalid API response: ${responseText.substring(0, 200)}` },
-        { status: 500 }
-      )
-    }
-
-    // Save to database (non-blocking, don't fail if db error)
+    // Save to database (non-blocking)
     try {
       const supabase = await createClient()
-      const { error: dbError } = await supabase
-        .from('video_generations')
-        .insert({
-          task_id: data.id,
-          model,
-          prompt,
-          first_image: images?.[0] || null,
-          last_image: images?.[1] || null,
-          status: data.status || 'pending',
-          enhanced_prompt: data.enhanced_prompt || null,
-        })
-
-      if (dbError) {
-        console.error('[CREATE] 数据库错误:', dbError.message, dbError.details)
-      } else {
-        console.log('[CREATE] 已保存到数据库')
-      }
+      await supabase.from('video_generations').insert({
+        task_id: data.id,
+        model,
+        prompt,
+        first_image: imageValidation.images[0] || null,
+        last_image: imageValidation.images[1] || null,
+        status: data.status || 'pending',
+        enhanced_prompt: data.enhanced_prompt || null,
+      })
     } catch (dbErr) {
-      console.error('[CREATE] 数据库异常:', dbErr)
+      console.error('[CREATE] Database error:', dbErr)
+      // Don't fail the request if database save fails
     }
 
-    console.log('[CREATE] 请求完成, 返回 task_id:', data.id)
     return NextResponse.json(data)
   } catch (error) {
-    console.error('[CREATE] 异常:', error)
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to create video' },
-      { status: 500 }
-    )
+    console.error('[CREATE] Error:', error)
+    const message = error instanceof Error ? error.message : 'Failed to create video'
+    return NextResponse.json({ error: message }, { status: 500 })
   }
 }

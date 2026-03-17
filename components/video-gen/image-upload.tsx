@@ -3,7 +3,7 @@
 import React from "react"
 
 import { useCallback, useState } from 'react'
-import { Upload, X, ImageIcon } from 'lucide-react'
+import { Upload, X, ImageIcon, AlertCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useLocale } from '@/lib/locale'
 
@@ -14,32 +14,52 @@ interface ImageUploadProps {
   disabled?: boolean
 }
 
+const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
+const MAX_IMAGE_DIMENSION = 1024
+const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp']
+
 export function ImageUpload({ label, value, onChange, disabled }: ImageUploadProps) {
   const [isDragging, setIsDragging] = useState(false)
   const [aspectRatio, setAspectRatio] = useState<number | null>(null)
+  const [error, setError] = useState<string | null>(null)
   const { t } = useLocale()
 
+  const validateFile = (file: File): { valid: boolean; error?: string } => {
+    if (!ALLOWED_TYPES.includes(file.type)) {
+      return { valid: false, error: 'Only PNG, JPG, and WebP images are allowed' }
+    }
+    if (file.size > MAX_FILE_SIZE) {
+      return { valid: false, error: `File size must be less than 10MB (current: ${(file.size / 1024 / 1024).toFixed(2)}MB)` }
+    }
+    return { valid: true }
+  }
+
   const handleFile = useCallback((file: File) => {
-    if (!file.type.startsWith('image/')) return
+    setError(null)
+
+    const validation = validateFile(file)
+    if (!validation.valid) {
+      setError(validation.error || 'Invalid file')
+      return
+    }
 
     const reader = new FileReader()
     reader.onload = (e) => {
       const base64 = e.target?.result as string
-      // 压缩图片
+      // Compress image
       const img = new Image()
       img.onload = () => {
         const canvas = document.createElement('canvas')
-        const maxSize = 1024 // 最大尺寸
         let { width, height } = img
         
-        // 按比例缩放
-        if (width > maxSize || height > maxSize) {
+        // Scale proportionally
+        if (width > MAX_IMAGE_DIMENSION || height > MAX_IMAGE_DIMENSION) {
           if (width > height) {
-            height = (height / width) * maxSize
-            width = maxSize
+            height = (height / width) * MAX_IMAGE_DIMENSION
+            width = MAX_IMAGE_DIMENSION
           } else {
-            width = (width / height) * maxSize
-            height = maxSize
+            width = (width / height) * MAX_IMAGE_DIMENSION
+            height = MAX_IMAGE_DIMENSION
           }
         }
         
@@ -48,12 +68,18 @@ export function ImageUpload({ label, value, onChange, disabled }: ImageUploadPro
         const ctx = canvas.getContext('2d')
         ctx?.drawImage(img, 0, 0, width, height)
         
-        // 转换为压缩后的 base64
+        // Convert to compressed base64
         const compressedBase64 = canvas.toDataURL('image/jpeg', 0.8)
         setAspectRatio(img.naturalWidth / img.naturalHeight)
         onChange(compressedBase64)
       }
+      img.onerror = () => {
+        setError('Failed to load image')
+      }
       img.src = base64
+    }
+    reader.onerror = () => {
+      setError('Failed to read file')
     }
     reader.readAsDataURL(file)
   }, [onChange])
@@ -84,6 +110,7 @@ export function ImageUpload({ label, value, onChange, disabled }: ImageUploadPro
   const handleRemove = () => {
     onChange(null)
     setAspectRatio(null)
+    setError(null)
   }
 
   return (
@@ -110,43 +137,51 @@ export function ImageUpload({ label, value, onChange, disabled }: ImageUploadPro
           </button>
         </div>
       ) : (
-        <label
-          onDrop={handleDrop}
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          className={cn(
-            'flex flex-col items-center justify-center gap-3 p-6 rounded-lg border-2 border-dashed cursor-pointer transition-all min-h-[120px]',
-            isDragging 
-              ? 'border-primary bg-primary/5' 
-              : 'border-border hover:border-muted-foreground hover:bg-muted/30',
-            disabled && 'opacity-50 cursor-not-allowed'
+        <>
+          <label
+            onDrop={handleDrop}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            className={cn(
+              'flex flex-col items-center justify-center gap-3 p-6 rounded-lg border-2 border-dashed cursor-pointer transition-all min-h-[120px]',
+              isDragging 
+                ? 'border-primary bg-primary/5' 
+                : 'border-border hover:border-muted-foreground hover:bg-muted/30',
+              disabled && 'opacity-50 cursor-not-allowed'
+            )}
+          >
+            <input
+              type="file"
+              accept={ALLOWED_TYPES.join(',')}
+              onChange={handleInputChange}
+              disabled={disabled}
+              className="sr-only"
+            />
+            <div className="flex flex-col items-center gap-2 text-center">
+              <div className="p-3 rounded-full bg-muted">
+                {isDragging ? (
+                  <Upload className="w-5 h-5 text-primary" />
+                ) : (
+                  <ImageIcon className="w-5 h-5 text-muted-foreground" />
+                )}
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-foreground">
+                  {isDragging ? t.dropHere : t.clickOrDrag}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {t.imageSize}
+                </p>
+              </div>
+            </div>
+          </label>
+          {error && (
+            <div className="flex items-start gap-2 p-3 rounded-lg bg-destructive/10 border border-destructive/20">
+              <AlertCircle className="w-4 h-4 text-destructive flex-shrink-0 mt-0.5" />
+              <p className="text-sm text-destructive">{error}</p>
+            </div>
           )}
-        >
-          <input
-            type="file"
-            accept="image/*"
-            onChange={handleInputChange}
-            disabled={disabled}
-            className="sr-only"
-          />
-          <div className="flex flex-col items-center gap-2 text-center">
-            <div className="p-3 rounded-full bg-muted">
-              {isDragging ? (
-                <Upload className="w-5 h-5 text-primary" />
-              ) : (
-                <ImageIcon className="w-5 h-5 text-muted-foreground" />
-              )}
-            </div>
-            <div className="space-y-1">
-              <p className="text-sm font-medium text-foreground">
-                {isDragging ? t.dropHere : t.clickOrDrag}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                {t.imageSize}
-              </p>
-            </div>
-          </div>
-        </label>
+        </>
       )}
     </div>
   )

@@ -125,4 +125,47 @@
   body {
     @apply bg-background text-foreground;
   }
+
+  /* 细滚动条样式 */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--primary) / 0.4);
+    border-radius: 3px;
+    transition: background 0.2s;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--primary) / 0.6);
+  }
+
+  /* Firefox 滚动条 */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--primary) / 0.4) transparent;
+  }
+
+  /* 高对比度模式 */
+  @media (prefers-contrast: more) {
+    :root, .dark {
+      --foreground: oklch(0.98 0 0);
+      --card-foreground: oklch(0.98 0 0);
+      --primary: oklch(0.7 0.25 250);
+      --accent: oklch(0.65 0.2 180);
+    }
+
+    .light {
+      --foreground: oklch(0.1 0.01 285);
+      --card-foreground: oklch(0.1 0.01 285);
+      --primary: oklch(0.45 0.25 250);
+      --accent: oklch(0.35 0.2 180);
+    }
+  }
 }
