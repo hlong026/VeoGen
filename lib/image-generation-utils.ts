@@ -2,6 +2,16 @@
  * 图像生成 API 工具函数
  */
 
+function extractBase64Data(imageBase64: string): string {
+  return imageBase64.includes(',') ? imageBase64.split(',')[1] : imageBase64
+}
+
+function getMimeTypeFromDataUrl(imageBase64: string): string {
+  const matchedMimeType = imageBase64.match(/^data:(.*?);base64,/)?.[1]
+
+  return matchedMimeType || 'image/jpeg'
+}
+
 export interface ImageGenerationRequest {
   prompt: string
   apiKey: string
@@ -39,6 +49,7 @@ export async function generateImage(
   config?: {
     aspectRatio?: string
     imageSize?: string
+    referenceImages?: string[]
   }
 ): Promise<string> {
   const endpoint = `https://yunwu.ai/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`
@@ -47,18 +58,27 @@ export async function generateImage(
     model,
     endpoint,
     promptLength: prompt.length,
+    referenceImageCount: config?.referenceImages?.length || 0,
     config,
   })
+
+  const requestParts = [
+    {
+      text: prompt,
+    },
+    ...((config?.referenceImages || []).map((imageBase64) => ({
+      inline_data: {
+        mime_type: getMimeTypeFromDataUrl(imageBase64),
+        data: extractBase64Data(imageBase64),
+      },
+    }))),
+  ]
 
   const requestBody = {
     contents: [
       {
         role: 'user',
-        parts: [
-          {
-            text: prompt,
-          },
-        ],
+        parts: requestParts,
       },
     ],
     generationConfig: {
@@ -132,8 +152,7 @@ export async function editImage(
 ): Promise<string> {
   const endpoint = `https://yunwu.ai/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`
 
-  // Extract base64 data if it's a data URL
-  const base64Data = imageBase64.includes(',') ? imageBase64.split(',')[1] : imageBase64
+  const base64Data = extractBase64Data(imageBase64)
 
   console.log('[IMAGE_EDIT] 请求参数:', {
     model,

@@ -5,6 +5,7 @@ A modern web application for generating videos using AI models. Built with Next.
 ## Features
 
 - 🎬 AI-powered video generation
+- 🖼️ AI image generation with text-to-image and multi-image image-to-image
 - 🖼️ Support for start and end frame images
 - ✨ Prompt enhancement with AI
 - 📱 Responsive design (desktop and mobile)
@@ -95,6 +96,15 @@ Your settings are saved locally in the browser.
 4. Click **Generate Video**
 5. Wait for the video to be generated (may take several minutes)
 6. Download or view the generated video
+
+### Generate an Image
+
+1. Switch to the **Image** tab
+2. Choose **Text-to-Image** or **Image-to-Image** mode
+3. In **Image-to-Image** mode, upload one or more reference images
+4. Enter the image description or edit instruction
+5. Adjust aspect ratio and resolution if needed
+6. Click **Generate Image** and download the result after generation
 
 ### View History
 

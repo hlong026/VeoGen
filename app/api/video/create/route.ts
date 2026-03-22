@@ -53,6 +53,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: imageValidation.error }, { status: 400 })
     }
 
+    const validatedImages = imageValidation.images ?? []
+
     const apiEndpoint = buildApiEndpoint(apiBaseUrl, '/video/create')
     console.log('[CREATE] Calling API:', apiEndpoint)
 
@@ -65,7 +67,7 @@ export async function POST(request: NextRequest) {
         body: JSON.stringify({
           model,
           prompt,
-          images: imageValidation.images,
+          images: validatedImages,
           enhance_prompt: enhance_prompt ?? true,
         }),
       })
@@ -87,8 +89,8 @@ export async function POST(request: NextRequest) {
         task_id: data.id,
         model,
         prompt,
-        first_image: imageValidation.images[0] || null,
-        last_image: imageValidation.images[1] || null,
+        first_image: validatedImages[0] || null,
+        last_image: validatedImages[1] || null,
         status: data.status || 'pending',
         enhanced_prompt: data.enhanced_prompt || null,
       })

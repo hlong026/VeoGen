@@ -18,6 +18,7 @@ export interface ImageGenerationConfig {
   aspectRatio: string
   imageSize: string
   responseModalities: string[]
+  referenceImages?: string[]
 }
 
 export function ImageGenerationPage({
@@ -28,7 +29,7 @@ export function ImageGenerationPage({
 }: ImageGenerationPageProps) {
   const [mode, setMode] = useState<'text-to-image' | 'image-to-image'>('text-to-image')
   const [prompt, setPrompt] = useState('')
-  const [uploadedImage, setUploadedImage] = useState<string | null>(null)
+  const [uploadedImages, setUploadedImages] = useState<string[]>([])
   const [isGenerating, setIsGenerating] = useState(false)
   const [generatedImage, setGeneratedImage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -45,8 +46,8 @@ export function ImageGenerationPage({
       return
     }
 
-    if (mode === 'image-to-image' && !uploadedImage) {
-      setError('请上传图像')
+    if (mode === 'image-to-image' && uploadedImages.length === 0) {
+      setError('请至少上传一张图像')
       return
     }
 
@@ -68,6 +69,7 @@ export function ImageGenerationPage({
         aspectRatio,
         imageSize,
         responseModalities: ['IMAGE'],
+        referenceImages: mode === 'image-to-image' ? uploadedImages : [],
       }
 
       const imageUrl = await onGenerateImage(prompt, config)
@@ -118,7 +120,7 @@ export function ImageGenerationPage({
               <ImageIcon className="w-5 h-5 text-pink-500" />
               <h3 className="font-semibold">上传图像</h3>
             </div>
-            <ImageUpload label="选择图像" value={uploadedImage} onChange={setUploadedImage} disabled={isGenerating} />
+            <ImageUpload label="选择图像" value={uploadedImages} onChange={setUploadedImages} disabled={isGenerating} multiple />
           </div>
         )}
 
@@ -202,7 +204,7 @@ export function ImageGenerationPage({
         {/* 按钮 */}
         <Button
           onClick={handleGenerate}
-          disabled={isGenerating || !apiKey || !prompt.trim() || (mode === 'image-to-image' && !uploadedImage)}
+          disabled={isGenerating || !apiKey || !prompt.trim() || (mode === 'image-to-image' && uploadedImages.length === 0)}
           className="w-full h-12 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 shadow-lg shadow-purple-500/20"
         >
           {isGenerating ? (

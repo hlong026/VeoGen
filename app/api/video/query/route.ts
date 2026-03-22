@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'API Key is required' }, { status: 400 })
     }
 
-    const apiEndpoint = buildApiEndpoint(apiBaseUrl, `/video/query?id=${encodeURIComponent(taskId)}`)
+    const apiEndpoint = buildApiEndpoint(apiBaseUrl || '', `/video/query?id=${encodeURIComponent(taskId)}`)
     console.log('[QUERY] Querying task:', taskId)
 
     // Query the Veo API
