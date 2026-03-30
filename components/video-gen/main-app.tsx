@@ -11,7 +11,7 @@ import{SettingsPanel}from'@/components/video-gen/settings-panel'
 import{ImageGenerationPage}from'@/components/video-gen/image-generation-page'
 import{VideoGenerationPage}from'@/components/video-gen/video-generation-page'
 import{generateImage}from'@/lib/image-generation-utils'
-import type{VideoGeneration}from'@/lib/types'
+import type{VideoGenerationBatch}from'@/lib/types'
 import{useLocale}from'@/lib/locale'
 const f=(url:string)=>fetch(url).then(r=>r.json())
 export function MainApp(){const{t}=useLocale()
@@ -24,7 +24,7 @@ const[vm,setVm]=useState('veo3-fast-frames')
 const[im,setIm]=useState('gemini-2.5-flash-image-preview')
 const[mode,setMode]=useState<'video'|'image'>('video')
 const[mobileMenuOpen,setMobileMenuOpen]=useState(false)
-const{data:h=[],isLoading:hl}=useSWR<VideoGeneration[]>('/api/video/history',f,{refreshInterval:30000})
+const{data:h=[],isLoading:hl}=useSWR<VideoGenerationBatch[]>('/api/video/history',f,{refreshInterval:30000})
 useEffect(()=>{const t=localStorage.getItem('veo-theme')as'light'|'dark'||'dark'
 setTheme(t)
 document.documentElement.classList.toggle('dark',t==='dark')

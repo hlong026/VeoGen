@@ -1,9 +1,64 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import type { VideoGeneration, VideoGenerationBatch } from '@/lib/types'
 
 const MAX_HISTORY_ITEMS = 50
 const MAX_RETRIES = 3
 const RETRY_DELAY = 1000
+
+function groupHistoryByBatch(history: VideoGeneration[]): VideoGenerationBatch[] {
+  const batchMap = new Map<string, VideoGenerationBatch>()
+
+  for (const item of history) {
+    const batchId = item.batch_id || item.task_id
+    const existingBatch = batchMap.get(batchId)
+
+    if (!existingBatch) {
+      batchMap.set(batchId, {
+        id: batchId,
+        batchId,
+        createdAt: item.created_at,
+        total: item.batch_total || 1,
+        completed: item.status === 'completed' ? 1 : 0,
+        failed: item.status === 'failed' ? 1 : 0,
+        processing: item.status === 'processing' ? 1 : 0,
+        pending: item.status === 'pending' ? 1 : 0,
+        items: [item],
+      })
+      continue
+    }
+
+    existingBatch.items.push(item)
+    existingBatch.completed += item.status === 'completed' ? 1 : 0
+    existingBatch.failed += item.status === 'failed' ? 1 : 0
+    existingBatch.processing += item.status === 'processing' ? 1 : 0
+    existingBatch.pending += item.status === 'pending' ? 1 : 0
+
+    if (new Date(item.created_at).getTime() > new Date(existingBatch.createdAt).getTime()) {
+      existingBatch.createdAt = item.created_at
+    }
+
+    if (item.batch_total && item.batch_total > existingBatch.total) {
+      existingBatch.total = item.batch_total
+    }
+  }
+
+  return Array.from(batchMap.values())
+    .map((batch) => ({
+      ...batch,
+      items: [...batch.items].sort((a, b) => {
+        const firstIndex = a.batch_index ?? Number.MAX_SAFE_INTEGER
+        const secondIndex = b.batch_index ?? Number.MAX_SAFE_INTEGER
+
+        if (firstIndex !== secondIndex) {
+          return firstIndex - secondIndex
+        }
+
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      }),
+    }))
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+}
 
 async function fetchWithRetry(retries = 0): Promise<any> {
   try {
@@ -61,7 +116,7 @@ export async function GET() {
       return NextResponse.json({ error: message }, { status: 500 })
     }
 
-    return NextResponse.json(data || [])
+    return NextResponse.json(groupHistoryByBatch((data || []) as VideoGeneration[]))
   } catch (error) {
     console.error('[HISTORY] Unexpected error:', error)
     const message = error instanceof Error ? error.message : 'Failed to fetch history'

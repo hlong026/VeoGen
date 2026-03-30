@@ -3,6 +3,9 @@ export type VideoStatus = 'pending' | 'processing' | 'completed' | 'failed'
 export interface VideoGeneration {
   id: string
   task_id: string
+  batch_id: string | null
+  batch_index: number | null
+  batch_total: number | null
   model: string
   prompt: string
   first_image: string | null
@@ -19,6 +22,9 @@ export interface CreateVideoRequest {
   prompt: string
   images?: string[]
   enhance_prompt?: boolean
+  batch_id?: string
+  batch_index?: number
+  batch_total?: number
   apiKey: string
   apiBaseUrl: string
 }
@@ -48,6 +54,18 @@ export interface PollConfig {
   maxRetries?: number
   initialDelayMs?: number
   maxDelayMs?: number
+}
+
+export interface VideoGenerationBatch {
+  id: string
+  batchId: string
+  createdAt: string
+  total: number
+  completed: number
+  failed: number
+  processing: number
+  pending: number
+  items: VideoGeneration[]
 }
 
 export type GenerationType = 'video' | 'image'

@@ -39,7 +39,7 @@ function validateImages(images: string[] | undefined) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { model, prompt, images, enhance_prompt, apiKey, apiBaseUrl } = body
+    const { model, prompt, images, enhance_prompt, batch_id, batch_index, batch_total, apiKey, apiBaseUrl } = body
 
     // Validate request
     const validation = validateRequest(model, prompt, apiKey)
@@ -87,6 +87,9 @@ export async function POST(request: NextRequest) {
       const supabase = await createClient()
       await supabase.from('video_generations').insert({
         task_id: data.id,
+        batch_id: batch_id || null,
+        batch_index: typeof batch_index === 'number' ? batch_index : null,
+        batch_total: typeof batch_total === 'number' ? batch_total : null,
         model,
         prompt,
         first_image: validatedImages[0] || null,

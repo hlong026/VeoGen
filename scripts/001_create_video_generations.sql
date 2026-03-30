@@ -8,6 +8,9 @@ DROP TABLE IF EXISTS public.video_generations;
 CREATE TABLE public.video_generations (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   task_id TEXT NOT NULL,
+  batch_id TEXT,
+  batch_index INTEGER,
+  batch_total INTEGER,
   model TEXT NOT NULL,
   prompt TEXT NOT NULL,
   first_image TEXT,
@@ -21,6 +24,7 @@ CREATE TABLE public.video_generations (
 
 -- Create indexes
 CREATE INDEX idx_video_generations_task_id ON public.video_generations(task_id);
+CREATE INDEX idx_video_generations_batch_id ON public.video_generations(batch_id);
 CREATE INDEX idx_video_generations_created_at ON public.video_generations(created_at DESC);
 
 -- Enable Row Level Security
