@@ -167,7 +167,7 @@ export function GenerationHistory({ history, onRefresh, loading }: GenerationHis
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex h-full min-h-0 flex-col">
       <div className="flex items-center justify-end p-4 border-b border-border">
         <Button
           variant="ghost"
@@ -183,7 +183,7 @@ export function GenerationHistory({ history, onRefresh, loading }: GenerationHis
         </Button>
       </div>
       
-      <ScrollArea className="flex-1">
+      <ScrollArea className="min-h-0 flex-1">
         {history.length === 0 ? (
           <div className="flex flex-col items-center justify-center p-8 text-center">
             <History className="w-12 h-12 text-muted-foreground/30 mb-3" />
